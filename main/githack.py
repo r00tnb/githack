@@ -1,6 +1,6 @@
 # coding:utf-8
 # python2
-import os,sys
+import os,argparse
 try:
     import requests
 except:
@@ -37,7 +37,7 @@ class GitHack:
         if -1 != a:
             if not os.path.exists('.git/'+urlpath[:a]):
                 os.makedirs('.git/'+urlpath[:a])
-        f = open('.git/'+urlpath,'w')
+        f = open('.git/'+urlpath,'wb')
         f.write(r.content)
         r.close()
         f.close()
@@ -115,47 +115,37 @@ class GitHack:
         参数：sucDic类似于{'111...1':'1.txt'}键为对象sha1值，值为对应文件名路径
         '''
         for i in sucDic:
+            fileName = sucDic[i]
             text = os.popen('git cat-file -p {}'.format(i)).read()
             #mkdir
             a = sucDic[i].rfind('/')
             if(-1 != a):
                 if not os.path.exists(sucDic[i][:a]):
                     os.makedirs(sucDic[i][:a])
-            f = open(sucDic[i],'w')
+            if os.path.exists(sucDic[i]):
+                fileName = "{}.{}".format(i,sucDic[i])
+            f = open(fileName,'w')
             f.write(text)
             f.close()
-            print 'save file {}.'.format(sucDic[i])
-
-def usage():
-    print '''usage:python githack.py hosturl [rootdir] [fromlogs]
-                    params：hosturl为包含git目录的url
-                            rootdirgit目录会下载到该目录
-                            fromlogs可以为任意值即可变为第二个模式。
-                    本脚本有两个模式（默认1）：1.下载暂存区的文件。2.从logs中遍历所有对象'''
+            print 'save file {}.'.format(fileName)
 
 def main():
     '''
-    没怎么处理异常，也没美化命令行，有时间做
+    使用argparse解析命令行参数
     '''
-    log = False
-    if len(sys.argv)==3:
-        rootdir = sys.argv[2]
-    elif len(sys.argv)==2:
-        rootdir = 'githack'
-    elif len(sys.argv)==4:
-        log = True
-    else:
-        usage()
-        return
-    g = GitHack(sys.argv[1],rootdir)
-    if log:
-        print 'from Logs mod!'
-        sucDic = g.fromLogs()
-    else:
-        print 'from index mod!'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("hosturl",help="git catalog path.like 'http://127.0.0/.git/'")
+    parser.add_argument("-r","--root",default='githack',help="you will save catalog to the base dir")
+    parser.add_argument("-m","--mod",default=1,type=int,choices=[1,2],help="you can use tow mods.1=>'get from index';2=>'get from logs'")
+    
+    args = parser.parse_args()
+    g = GitHack(args.hosturl,args.root)
+    sucDic = {}
+    if args.mod == 1:
         sucDic = g.fromIndex()
-    #print sucDic
+    elif args.mod == 2:
+        sucDic = g.fromLogs()
+        
     print ''
     g.saveFile(sucDic)
-
 main()
